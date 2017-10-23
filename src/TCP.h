@@ -11,9 +11,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_SEQ 1024
-#define WINDOW_SIZE MAX_SEQ/50
-#define MSS 100
+#define MAX_SEQ 10240
+#define WINDOW_SIZE MAX_SEQ/10
+#define MSS 1024
 
 
 //Status for segments

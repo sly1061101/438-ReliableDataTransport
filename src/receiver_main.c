@@ -33,9 +33,9 @@ void diep(char *s) {
 }
 
 //write the data from a segment to file
-void write_to_file(TCP_Seg* pkt){
+void write_to_file(TCP_Seg* pkt, char* filename){
     FILE * fileptr;
-    fileptr = fopen("receivedData","a");
+    fileptr = fopen(filename,"a");
     fwrite(pkt->data, 1, pkt->LEN, fileptr);
     fclose(fileptr);
     return;
@@ -86,7 +86,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
             if( ( seg_r.SEQ == expectedSeq ) && ( IsCorrupted(seg_r) == 0 ) ){
                 expectedSeq = SeqAdd(expectedSeq, 1);
                 if(seg_r.FIN != 1){
-                    write_to_file(&seg_r);//to be implement;
+                    write_to_file(&seg_r, destinationFile);//to be implement;
                 }
                 else{
                     make_FIN_Seg( &seg_s, 0, expectedSeq );
@@ -115,10 +115,10 @@ int main(int argc, char** argv) {
 
     unsigned short int udpPort;
 
-//    if (argc != 3) {
-//        fprintf(stderr, "usage: %s UDP_port filename_to_write\n\n", argv[0]);
-//        exit(1);
-//    }
+   if (argc != 3) {
+       fprintf(stderr, "usage: %s UDP_port filename_to_write\n\n", argv[0]);
+       exit(1);
+   }
 
     udpPort = (unsigned short int) atoi(argv[1]);
 

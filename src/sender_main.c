@@ -93,7 +93,12 @@ void ReceiveACK(TCP_Seg seg){
 //Function dealing with timeout
 void TimeOut(){
     TCP_Seg seg;
-    seg = GetSeg(list, base);
+    for(int i=0; i<WINDOW_SIZE; i++ ){
+    	if( GetStatus(list, SeqAdd(base,i)) == UNACKED ){
+	    	seg = GetSeg(list, SeqAdd(base,i));
+	    	sendto(s, &seg, sizeof(TCP_Seg), 0, (struct sockaddr*) &si_other, sizeof (si_other));	
+    	}
+    }
     TimerStartAt = clock();
     IsTimerOn = 1;
 }
@@ -179,6 +184,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         //printf("base:%d nextseq:%d total:%d notsend:%d unacked:%d\n",base,nextSeq,SegNum,SegNotSend,SegUnAcked);
         //If there is no Segment waitting to be ACK and the file has ended
         if( (SegNum == 0) && IsFileEnd(read_offset,bytesToTransfer) ){
+        	puts("Ending connecting......");
             make_FIN_Seg(&seg, SeqAdd(base, SegNum), 0);
             AddSegToBuffer(seg);
             SendSegment();
@@ -198,7 +204,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             }
         }
         
-        if( SegNum < WINDOW_SIZE ){
+        while( SegNum < WINDOW_SIZE ){
             if( !IsFileEnd(read_offset,bytesToTransfer) ){
                 char data[MSS];
                 int len;
@@ -206,6 +212,8 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                 make_Seg(&seg, SeqAdd(base, SegNum), 0, len, data);
                 AddSegToBuffer(seg);
             }
+            else
+            	break;
 //            if( i >= 0 ){
 //                char data[100];
 //                sprintf(data,"Send... SEQ:%d\n",SeqAdd(base, SegNum));
@@ -229,7 +237,9 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
         }
         
         if( IsTimerOn == 1 ){
-            if( (clock() - TimerStartAt) >= CLOCKS_PER_SEC*5 ){
+            if( (clock() - TimerStartAt) >= CLOCKS_PER_SEC/10 ){
+            	printf("base:%d nextseq:%d total:%d notsend:%d unacked:%d\n",base,nextSeq,SegNum,SegNotSend,SegUnAcked);
+            	puts("Timeout.");
                 TimeOut();
             }
         }
@@ -248,10 +258,10 @@ int main(int argc, char** argv) {
     unsigned short int udpPort;
     unsigned long long int numBytes;
 
-//    if (argc != 5) {
-//        fprintf(stderr, "usage: %s receiver_hostname receiver_port filename_to_xfer bytes_to_xfer\n\n", argv[0]);
-//        exit(1);
-//    }
+   if (argc != 5) {
+       fprintf(stderr, "usage: %s receiver_hostname receiver_port filename_to_xfer bytes_to_xfer\n\n", argv[0]);
+       exit(1);
+   }
     udpPort = (unsigned short int) atoi(argv[2]);
     numBytes = atoll(argv[4]);
 
