@@ -11,10 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_SEQ 10240
-#define WINDOW_SIZE MAX_SEQ/10
 #define MSS 1024
-
 
 //Status for segments
 enum Seg_Status_t{NOTSEND, UNACKED, ACKED, NOTEXIST};

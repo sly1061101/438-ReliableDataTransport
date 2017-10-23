@@ -24,6 +24,9 @@
 #include <sys/unistd.h>
 #include <sys/fcntl.h>
 
+#define MAX_SEQ 10240
+#define WINDOW_SIZE MAX_SEQ/10
+
 //linked list to act as buffer
 Node *list;
 
@@ -214,16 +217,6 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             }
             else
             	break;
-//            if( i >= 0 ){
-//                char data[100];
-//                sprintf(data,"Send... SEQ:%d\n",SeqAdd(base, SegNum));
-//                make_Seg(&seg, SeqAdd(base, SegNum), 0, strlen(data) + 1, data );
-//                AddSegToBuffer(seg);
-//                i--;
-//                //printf("Add packet with seq:%d\n",seg.SEQ);
-//            }
-//            else
-//                tempFlag=1;
         }
         
         if(1){
