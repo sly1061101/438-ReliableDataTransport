@@ -20,6 +20,9 @@
 #include <sys/unistd.h>
 #include <sys/fcntl.h>
 
+//list acting as receiver's buffer
+Node *list;
+
 //the seq of next packet that is waitting for
 int expectedSeq;
 
@@ -81,20 +84,32 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
     while(1){
         //if received a packet
         if( (recvfrom(s, &seg_r, sizeof(TCP_Seg), 0, (struct sockaddr*) &si_other, &slen)) != -1){
-            //if is expected number and not corrupted, write the data to file and add exceptedSeq by 1
-            //else do nothing
-            if( ( seg_r.SEQ == expectedSeq ) && ( IsCorrupted(seg_r) == 0 ) ){
-                expectedSeq = SeqAdd(expectedSeq, 1);
-                if(seg_r.FIN != 1){
-                    write_to_file(&seg_r, destinationFile);//to be implement;
-                }
-                else{
-                    make_FIN_Seg( &seg_s, 0, expectedSeq );
-                    sendto(s, &seg_s, sizeof(TCP_Seg) , 0, (struct sockaddr*) &si_other, slen);
-                    puts("Finish!");
-                    break;
-                }
-            }
+			if( !IsCorrupted(seg_r) ){
+				//if is larger than expected number, save to buffer
+	            if( seg_r.SEQ > expectedSeq ){
+	            	if( GetNode(list, seg_r.SEQ).status == NOTEXIST )
+	            		AddNode(&list, seg_r, UNACKED);
+	            }
+	            //if is expectedSeq, write to file and write segments in buffer with consective SEQ
+	            else if( ( seg_r.SEQ == expectedSeq ) ){
+	                if(seg_r.FIN != 1){
+	                    write_to_file(&seg_r, destinationFile);//to be implement;
+            	        expectedSeq = SeqAdd(expectedSeq, 1);
+	                	while( GetNode(list, expectedSeq).status != NOTEXIST ){
+	                		seg_r = GetSeg(list, expectedSeq);
+	                		RemoveNode(&list, expectedSeq);
+	                		write_to_file(&seg_r, destinationFile);
+	                		expectedSeq = SeqAdd(expectedSeq, 1);
+	                	}
+	                }
+	                else{
+	                    make_FIN_Seg( &seg_s, 0, expectedSeq );
+	                    sendto(s, &seg_s, sizeof(TCP_Seg) , 0, (struct sockaddr*) &si_other, slen);
+	                    puts("Finish!");
+	                    break;
+	                }
+	            }
+        	}
             //send ACK segment back
             make_Seg(&seg_s, 0, expectedSeq, 0, NULL);
             sendto(s, &seg_s, sizeof(TCP_Seg) , 0, (struct sockaddr*) &si_other, slen);

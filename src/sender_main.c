@@ -100,6 +100,8 @@ void TimeOut(){
         CWND /= 2;
     TCP_Seg seg;
     for(int i=0; i<WINDOW_SIZE; i++ ){
+    //If timeout occurs, resend WINDOW_SIZE/10 UNACKED segments from base (if exist)
+    for(int i=0; i<WINDOW_SIZE/10; i++ ){
     	if( GetStatus(list, SeqAdd(base,i)) == UNACKED ){
 	    	seg = GetSeg(list, SeqAdd(base,i));
 	    	sendto(s, &seg, sizeof(TCP_Seg), 0, (struct sockaddr*) &si_other, sizeof (si_other));	
