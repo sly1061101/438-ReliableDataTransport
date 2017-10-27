@@ -99,7 +99,6 @@ void TimeOut(){
     if(CWND >=2)
         CWND /= 2;
     TCP_Seg seg;
-    for(int i=0; i<WINDOW_SIZE; i++ ){
     //If timeout occurs, resend WINDOW_SIZE/10 UNACKED segments from base (if exist)
     for(int i=0; i<WINDOW_SIZE/10; i++ ){
     	if( GetStatus(list, SeqAdd(base,i)) == UNACKED ){
