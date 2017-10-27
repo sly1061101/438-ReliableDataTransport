@@ -83,6 +83,7 @@ void reliablyReceive(unsigned short int myUDPport, char* destinationFile) {
         if( (recvfrom(s, &seg_r, sizeof(TCP_Seg), 0, (struct sockaddr*) &si_other, &slen)) != -1){
             //if is expected number and not corrupted, write the data to file and add exceptedSeq by 1
             //else do nothing
+            //printf("%d\n", seg_r.SEQ);
             if( ( seg_r.SEQ == expectedSeq ) && ( IsCorrupted(seg_r) == 0 ) ){
                 expectedSeq = SeqAdd(expectedSeq, 1);
                 if(seg_r.FIN != 1){

@@ -24,6 +24,8 @@
 #include <sys/unistd.h>
 #include <sys/fcntl.h>
 
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+
 //linked list to act as buffer
 Node *list;
 
@@ -136,6 +138,45 @@ int IsFileEnd(unsigned long long int offset, unsigned long long int filesize){
     return 1;
 }
 
+void *thread_rec(void *param){
+    TCP_Seg seg;
+    while(1){
+        if( (recvfrom(s, &seg, sizeof(TCP_Seg), 0, (struct sockaddr*) &si_other, &slen)) != -1 ){
+            pthread_mutex_lock(&m);
+            //printf("%d\n",seg.ACK);
+            ReceiveACK(seg);
+            pthread_mutex_unlock(&m);
+        }
+
+    }
+}
+
+typedef struct fileinfo{
+    char* filename;
+    unsigned long long int bytesToTransfer;
+} FileInfo;
+
+unsigned long long int read_offset = 0; //lzy added ****
+
+void *thread_fill_buffer(void *param){
+    TCP_Seg seg;
+    while(1){
+        while( SegNum < WINDOW_SIZE ){
+            if( !IsFileEnd(read_offset, ( (FileInfo *)param )->bytesToTransfer) ){
+                char data[MSS];
+                int len;
+                GetDataFromFile( ( (FileInfo *)param )->filename, &read_offset,&( ( (FileInfo *)param ) ->bytesToTransfer),data,&len);//should give data[] and len value
+                make_Seg(&seg, SeqAdd(base, SegNum), 0, len, data);
+                pthread_mutex_lock(&m);
+                AddSegToBuffer(seg);
+                pthread_mutex_unlock(&m);
+            }
+            else
+                break;
+        }
+    }
+}
+
 void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* filename, unsigned long long int bytesToTransfer) {
 
 	/* Determine how many bytes to transfer */
@@ -179,7 +220,15 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     else{
         puts("Fail to Handshake!");
     }
-    unsigned long long int read_offset = 0; //lzy added ****
+
+    FileInfo f;
+    f.filename = filename;
+    f.bytesToTransfer = bytesToTransfer;
+
+    pthread_t tid1, tid2;
+    pthread_create(&tid1, NULL, thread_fill_buffer, &f);
+    pthread_create(&tid2, NULL, thread_rec, NULL);
+
     while(1){
         //printf("base:%d nextseq:%d total:%d notsend:%d unacked:%d\n",base,nextSeq,SegNum,SegNotSend,SegUnAcked);
         //If there is no Segment waitting to be ACK and the file has ended
@@ -204,26 +253,11 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             }
         }
         
-        while( SegNum < WINDOW_SIZE ){
-            if( !IsFileEnd(read_offset,bytesToTransfer) ){
-                char data[MSS];
-                int len;
-                GetDataFromFile(filename,&read_offset,&bytesToTransfer,data,&len);//should give data[] and len value
-                make_Seg(&seg, SeqAdd(base, SegNum), 0, len, data);
-                AddSegToBuffer(seg);
-            }
-            else
-            	break;
-        }
-        
         if(1){
             if( SegNotSend != 0){
+                //printf("%s\n", "sending...");
                 SendSegment();
             }
-        }
-        
-        if( (recvfrom(s, &seg, sizeof(TCP_Seg), 0, (struct sockaddr*) &si_other, &slen)) != -1 ){
-            ReceiveACK(seg);
         }
         
         if( IsTimerOn == 1 ){
