@@ -74,9 +74,9 @@ void SendSegment(){
 //Function dealing with received ACK
 void ReceiveACK(TCP_Seg seg){
     if( SeqCompare(seg.ACK,base) >= 0 ){
-        for(int i = 0; SeqCompare( SeqAdd(base,i), seg.ACK ) < 0 ; i++){
-            SetNodeStatus(list, SeqAdd(base,i), ACKED);
-            RemoveNode( &list, SeqAdd(base,i) );
+        while( SeqCompare( base, seg.ACK ) <= 0 ){
+            SetNodeStatus(list, base, ACKED);
+            RemoveNode( &list, base );
             SegUnAcked = GetStatusNumber(list, UNACKED);
             SegNum = GetNumber(list);
             base = SeqAdd(base,1);
