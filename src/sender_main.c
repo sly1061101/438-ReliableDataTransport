@@ -74,7 +74,7 @@ void SendSegment(){
 //Function dealing with received ACK
 void ReceiveACK(TCP_Seg seg){
     if( SeqCompare(seg.ACK,base) >= 0 ){
-        while( SeqCompare( base, seg.ACK ) <= 0 ){
+        while( SeqCompare( base, seg.ACK ) < 0 ){
             SetNodeStatus(list, base, ACKED);
             RemoveNode( &list, base );
             SegUnAcked = GetStatusNumber(list, UNACKED);
@@ -214,16 +214,6 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
             }
             else
             	break;
-//            if( i >= 0 ){
-//                char data[100];
-//                sprintf(data,"Send... SEQ:%d\n",SeqAdd(base, SegNum));
-//                make_Seg(&seg, SeqAdd(base, SegNum), 0, strlen(data) + 1, data );
-//                AddSegToBuffer(seg);
-//                i--;
-//                //printf("Add packet with seq:%d\n",seg.SEQ);
-//            }
-//            else
-//                tempFlag=1;
         }
         
         if(1){
