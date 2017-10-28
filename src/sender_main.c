@@ -27,6 +27,9 @@
 //linked list to act as buffer
 Node *list;
 
+//Number of repeated ACKs, used for fast retransmitt
+int repeatedACK;
+
 //the base sequence number of sending window
 int base;
 //the sequence number of next unsended packet
@@ -75,7 +78,12 @@ void SendSegment(){
 
 //Function dealing with received ACK
 void ReceiveACK(TCP_Seg seg){
-    if( SeqCompare(seg.ACK,base) >= 0 ){
+    //if ACK number equals to base number, repeatedACK should add by one
+    if(seg.ACK == base)
+            repeatedACK++;
+    //if a new segment is acked
+    if( SeqCompare(seg.ACK,base) > 0 ){
+        repeatedACK == 0;
         if(CWND < WINDOW_SIZE/2)
             CWND += 1/CWND;
         while( SeqCompare( base, seg.ACK ) < 0 ){
@@ -108,6 +116,7 @@ void TimeOut(){
     }
     TimerStartAt = clock();
     IsTimerOn = 1;
+    repeatedACK = 0;
 }
 
 //Add a segment to buffer
@@ -172,6 +181,7 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
     SegNotSend = GetStatusNumber(list, NOTSEND);
     SegUnAcked = GetStatusNumber(list, UNACKED);
     CWND = 1;
+    repeatedACK = 0;
     make_SYN_Seg(&seg, InitSeq, 0);
     AddSegToBuffer(seg);
     SendSegment();
@@ -235,6 +245,10 @@ void reliablyTransfer(char* hostname, unsigned short int hostUDPport, char* file
                 TimeOut();
             }
         }
+        
+        //if more than three repeatedACK, retransmitt immediately.(By calling timeout() function, which is intended for the same goal)
+        if(repeatedACK >= 3)
+            TimeOut();
     }
     
     close(s);
